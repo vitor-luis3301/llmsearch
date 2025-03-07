@@ -1,47 +1,64 @@
-import json
+from langchain_ollama import ChatOllama
+from langchain_community.agent_toolkits.load_tools import load_tools, Tool
+from langchain_community.tools import DuckDuckGoSearchResults
+from langchain_core.prompts import PromptTemplate
+from langchain.agents import AgentExecutor, create_react_agent
 
-# Import relevant functionality
-from langchain_community.tools import DuckDuckGoSearchResults, Tool
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
+from custom_tools.calculator import calc_tool
 
-from langgraph.prebuilt import create_react_agent
+react_template = """Answer the following question as best as you can. You have access to the following tools:
 
-def search(model, memory):
-    ddg_search = DuckDuckGoSearchResults(output_format="list")
+{tools}
 
-    tools = [
-        Tool(
-            name="DuckDuckGo Search",
-            func=ddg_search.run,
-            description=(
-                "A wrapper around the Duck Duck Go search engine. "
-                "Useful for when user asks questions about anything on the internet. "
-                "Use by default. "
+Use the following format:
+
+Question : The input question you must answer to
+Thought : you should always think about what to do, do not use any tool if it is not needed. 
+Action : The action to take, should be one of [{tool_names}]
+Action Input : the input to the action
+Observation : the result of the action
+.... (this thought/Action/Action input/Observation can repeat N times)
+Thought: I know the final answer
+Final Answer: The final answer to the user's question
+
+Begin!
+
+Question: {input}
+Thought: {agent_scratchpad}"""
+
+prompt = PromptTemplate(template = react_template, input_variables=["tools", "tool_names", "input", "agent_scratchpad"])
+
+def chat(model, memory):
+    search = DuckDuckGoSearchResults()
+    search_tool = Tool(
+        name = "DuckDuck search tool",
+        description=(
+            "A web search engine. Use this to seach engine for a general queries. "
+            "Do not use it if user does not ask to 'search' for something."
+        ),
+        func=search.run,
+    )
+
+    # Prepare tools
+    tools = load_tools([], llm=model, allow_dangerous_tools=True)
+    tools.append(calc_tool)
+    tools.append(search_tool)
+
+    agent = create_react_agent(model, tools, prompt)
+    agent_executor = AgentExecutor(
+        agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
+    )
+
+    while True:
+        queue = input("Search: ")
+        
+        if queue.lower() == "exit":
+            break
+        else:
+            output = agent_executor.invoke(
+                {
+                    "input": queue
+                }
             )
-        )
-    ]
 
-
-    agent = create_react_agent(model, tools, checkpointer=memory)
-
-    # Use the agent
-    config = {"configurable": {"thread_id": "testingtrack"}}
-    links = []
-
-    for chunk, metadata in agent.stream({"messages": [HumanMessage(content=input("Search"))]}, config, stream_mode="messages"):
-        #print(chunk)
-        if isinstance(chunk, AIMessage) and chunk.content not in ["", '', ' ', " "]:
-            print(chunk.content)
-            print("References: ", end="")
-            for i in links:
-                print(i, " ", end="")
-        if isinstance(chunk, ToolMessage):
-            if chunk.name == "DuckDuckGo Search":
-                search_res = json.loads(chunk.content)
-                for i in search_res:
-                    links.append(i["link"])
-            else:
-                links.append(chunk.name)
-        print("\n")
-
+        print(output["output"])
