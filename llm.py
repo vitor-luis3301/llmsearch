@@ -40,7 +40,7 @@ def chat():
             break
         
         if query.lower() == "search":
-            search(model, memory)
+            search(model)
         else:
             messages = [HumanMessage(query)]
             ai_msg = app.invoke({"messages": messages}, config)

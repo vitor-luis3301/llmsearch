@@ -28,13 +28,12 @@ Thought: {agent_scratchpad}"""
 
 prompt = PromptTemplate(template = react_template, input_variables=["tools", "tool_names", "input", "agent_scratchpad"])
 
-def chat(model, memory):
+def search(model):
     search = DuckDuckGoSearchResults()
     search_tool = Tool(
         name = "DuckDuck search tool",
         description=(
             "A web search engine. Use this to seach engine for a general queries. "
-            "Do not use it if user does not ask to 'search' for something."
         ),
         func=search.run,
     )
