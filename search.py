@@ -28,20 +28,26 @@ def search(model, memory):
     # Use the agent
     config = {"configurable": {"thread_id": "testingtrack"}}
     links = []
-
-    for chunk, metadata in agent.stream({"messages": [HumanMessage(content=input("Search"))]}, config, stream_mode="messages"):
-        #print(chunk)
-        if isinstance(chunk, AIMessage) and chunk.content not in ["", '', ' ', " "]:
-            print(chunk.content)
-            print("References: ", end="")
-            for i in links:
-                print(i, " ", end="")
-        if isinstance(chunk, ToolMessage):
-            if chunk.name == "DuckDuckGo Search":
-                search_res = json.loads(chunk.content)
-                for i in search_res:
-                    links.append(i["link"])
-            else:
-                links.append(chunk.name)
-        print("\n")
+    
+    while True:
+        query = input("Search: ")
+        
+        if query.lower() == "exit":
+            break
+        else:
+            for chunk, metadata in agent.stream({"messages": [HumanMessage(content=query)]}, config, stream_mode="messages"):
+                #print(chunk)
+                if isinstance(chunk, AIMessage) and chunk.content not in ["", '', ' ', " "]:
+                    print(chunk.content)
+                    print("References: ", end="")
+                    for i in links:
+                        print(i, " ", end="")
+                if isinstance(chunk, ToolMessage):
+                    if chunk.name == "DuckDuckGo Search":
+                        search_res = json.loads(chunk.content)
+                        for i in search_res:
+                            links.append(i["link"])
+                    else:
+                        links.append(chunk.name)
+                print("\n")
 
