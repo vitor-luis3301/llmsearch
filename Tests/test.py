@@ -8,7 +8,7 @@ from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_core.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 
-from custom_tools.calculator import calc_tool
+#from custom_tools.calculator import calc_tool
 
 ollama_llm = ChatOllama(model=os.getenv("DEFAULT_MODEL"), temperature=0)
 
@@ -47,7 +47,7 @@ search_tool = Tool(
 
 # Prepare tools
 tools = load_tools([], llm=ollama_llm, allow_dangerous_tools=True)
-tools.append(calc_tool)
+#tools.append(calc_tool)
 tools.append(search_tool)
 
 agent = create_react_agent(ollama_llm, tools, prompt)
